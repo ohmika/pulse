@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08111f">
+<meta name="description" content="Zelfstandige water-ejectie webapp met Web Audio en realtime frequentievisualizer.">
+<title>Water Ejector</title>
+<style>
+:root{color-scheme:dark;--bg:#07101d;--panel:rgba(15,28,48,.82);--panel2:rgba(11,23,40,.72);--line:rgba(148,163,184,.18);--text:#edf4ff;--muted:#94a8c3;--accent:#60a5fa;--accent2:#22d3ee;--ok:#34d399;--danger:#fb7185;--shadow:0 24px 70px rgba(0,0,0,.32)}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;min-height:100%;overflow-x:hidden;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at 20% 0%,#13315b 0,transparent 34%),radial-gradient(circle at 100% 20%,#083a52 0,transparent 30%),var(--bg);color:var(--text)}
+body{padding:24px}
+button,select,input{font:inherit}
+.app{width:min(1080px,100%);margin:auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(145deg,#38bdf8,#2563eb);box-shadow:0 10px 30px rgba(37,99,235,.35);font-size:21px}.brand h1{font-size:20px;margin:0}.brand p{margin:2px 0 0;color:var(--muted);font-size:12px}
+.status-pill{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;padding:9px 12px;border:1px solid var(--line);border-radius:999px;background:rgba(8,18,31,.55)}.dot{width:8px;height:8px;border-radius:50%;background:#64748b}.dot.live{background:var(--ok);box-shadow:0 0 16px rgba(52,211,153,.7)}
+.grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}.card{background:linear-gradient(180deg,rgba(18,34,58,.88),rgba(8,18,31,.83));border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);backdrop-filter:blur(16px)}
+.hero{padding:22px}.hero-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}.eyebrow{letter-spacing:.12em;text-transform:uppercase;font-size:11px;color:#7dd3fc}.hero h2{margin:7px 0 5px;font-size:clamp(26px,4vw,38px);line-height:1.05}.hero-sub{margin:0;color:var(--muted);max-width:640px}
+.visualizer{position:relative;width:100%;height:360px;border:1px solid rgba(96,165,250,.16);border-radius:20px;background:radial-gradient(circle at center,rgba(30,64,175,.16),transparent 58%);overflow:hidden}.visualizer canvas{position:absolute;inset:0;display:block;width:100%;height:100%;max-width:100%;max-height:100%;}
+.controls{padding:22px}.control{margin-bottom:18px}.control:last-child{margin-bottom:0}.labelrow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}.labelrow label{font-weight:650}.value{font-variant-numeric:tabular-nums;color:#bfdbfe;font-weight:700}.help{font-size:12px;color:var(--muted);margin-top:5px}
+select,input[type=range]{width:100%}select{appearance:none;padding:13px 42px 13px 14px;border-radius:14px;border:1px solid var(--line);background:#0b1728;color:var(--text);outline:none}select:focus{border-color:rgba(96,165,250,.5);box-shadow:0 0 0 4px rgba(96,165,250,.08)}
+input[type=range]{accent-color:#60a5fa}
+.advanced{display:none;padding-top:16px;margin-top:16px;border-top:1px solid var(--line)}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}.btn{border:0;border-radius:14px;padding:14px 16px;font-weight:750;cursor:pointer;transition:.18s transform,.18s opacity,.18s filter}.btn:hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.06)}.btn:active:not(:disabled){transform:translateY(0)}.btn:disabled{opacity:.42;cursor:not-allowed}.primary{background:linear-gradient(135deg,#38bdf8,#2563eb);color:white;box-shadow:0 10px 24px rgba(37,99,235,.28)}.secondary{background:rgba(148,163,184,.09);border:1px solid var(--line);color:var(--text)}.danger{background:rgba(244,63,94,.12);border:1px solid rgba(251,113,133,.22);color:#fecdd3}
+.advanced-btn{margin-top:12px;width:100%;padding:11px;border-radius:12px;background:transparent;border:1px dashed rgba(148,163,184,.22);color:#b9c9dc;cursor:pointer}.advanced-btn:hover{background:rgba(148,163,184,.05)}
+.progress-wrap{margin-top:18px;padding:15px 16px;background:rgba(3,10,20,.35);border:1px solid var(--line);border-radius:16px}.progress-top{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted);margin-bottom:10px}.progress{height:9px;border-radius:999px;background:#0a1524;overflow:hidden}.progress-bar{height:100%;width:0;background:linear-gradient(90deg,#22d3ee,#60a5fa,#818cf8);border-radius:inherit;transition:width .15s linear}
+.countdown{font-size:clamp(28px,5vw,46px);font-weight:800;line-height:1;font-variant-numeric:tabular-nums}.unit{font-size:12px;color:var(--muted);margin-left:4px;font-weight:600}
+.info{padding:20px}.info h3{margin:0 0 10px;font-size:16px}.info p{margin:0;color:var(--muted);font-size:13px;line-height:1.6}.note{margin-top:14px;padding:12px;border-radius:14px;background:rgba(34,211,238,.06);border:1px solid rgba(34,211,238,.12);font-size:12px;color:#c6eaf3}.footer{text-align:center;color:#6f829c;font-size:11px;margin-top:16px;padding-bottom:6px}
+.error{display:none;margin-top:14px;padding:12px 14px;border:1px solid rgba(251,113,133,.25);background:rgba(244,63,94,.08);color:#fecdd3;border-radius:14px;font-size:12px}.error.show{display:block}
+@media(max-width:860px){body{padding:14px}.grid{grid-template-columns:1fr}.visualizer{height:300px}.topbar{align-items:flex-start}.status-pill{white-space:nowrap}}
+@media(max-width:560px){.hero,.controls,.info{padding:16px}.actions{grid-template-columns:1fr}.hero-head{flex-direction:column}.visualizer{height:250px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><div class="logo">💧</div><div><h1>Water Ejector</h1><p>Web Audio water-ejection tool</p></div></div>
+    <div class="status-pill"><span id="status-dot" class="dot"></span><span id="status-label">Klaar om te starten</span></div>
+  </header>
+
+  <div class="grid">
+    <section class="card hero">
+      <div class="hero-head">
+        <div><div class="eyebrow">Audio cleaning</div><h2>Laat water uit je speaker trillen.</h2><p class="hero-sub">De app speelt een gecontroleerde reeks lage frequenties af. Gebruik dit op eigen risico en begin bij voorkeur met een lage intensiteit.</p></div>
+        <div class="countdown" id="countdown">60<span class="unit">sec</span></div>
+      </div>
+      <div id="frequency-visualizer" class="visualizer"></div>
+      <div class="progress-wrap"><div class="progress-top"><span>Voortgang</span><span id="progress-text">0%</span></div><div class="progress"><div id="progress-bar" class="progress-bar"></div></div></div>
+    </section>
+
+    <section class="card controls">
+      <div class="control"><div class="labelrow"><label for="clean-mode">Reinigingsmodus</label></div><select id="clean-mode"><option value="water-eject">Water Ejection — 60 s</option><option value="deep-clean">Deep Clean — 90 s</option><option value="gentle">Gentle Mode — 45 s</option><option value="custom">Custom</option></select><div id="mode-description" class="help">Geoptimaliseerde frequenties voor snelle waterverwijdering.</div></div>
+
+      <div class="advanced" id="advanced-controls">
+        <div class="control"><div class="labelrow"><label for="duration">Duur</label><span class="value"><span id="duration-value">60</span> s</span></div><input id="duration" type="range" min="10" max="180" value="60" step="5"><div class="help">Alleen bij Custom wordt deze duur gebruikt.</div></div>
+        <div class="control"><div class="labelrow"><label for="intensity">Intensiteit</label><span class="value"><span id="intensity-value">5</span>/10</span></div><input id="intensity" type="range" min="1" max="10" value="5" step="1"><div class="help">Hogere intensiteit betekent een hoger audiosignaal.</div></div>
+      </div>
+
+      <button id="toggle-advanced" class="advanced-btn" type="button">Geavanceerde opties tonen</button>
+
+      <div class="actions"><button id="start-clean" class="btn primary" type="button">▶ Start cleaning</button><button id="stop-clean" class="btn danger" type="button" disabled>■ Stop</button></div>
+      <div id="error-box" class="error"></div>
+    </section>
+
+    <section class="card info" style="grid-column:1/-1">
+      <h3>Gebruik</h3><p>Haal eerst losse kabels en accessoires weg. Leg je toestel zo dat water naar buiten kan lopen en richt de onderste speakeropening eventueel naar beneden. Start met een korte sessie. De browser moet audio mogen afspelen; de eerste druk op de startknop initialiseert de audio-engine.</p>
+      <div class="note">Let op: deze webapp kan het verwijderen van vocht ondersteunen, maar is geen garantie dat water of schade wordt opgelost. Speel geen zeer luide audio af dichtbij je oor.</div>
+    </section>
+  </div>
+  <div class="footer">Zelfstandig HTML-bestand · <span id="year"></span></div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const MUTE_GAIN = 0.0001;
+  const BASE_GAIN = 0.24;
+  const MODES = {
+    'water-eject': {name:'Water Ejection',duration:60,frequencyPattern:[165,175,185,195,205,215,225,230],toneDuration:0.58,pauseDuration:0.16,gain:0.28,intensity:5,description:'Lage, gepulseerde 165–230 Hz sweep voor waterverwijdering.'},
+    'deep-clean': {name:'Deep Clean',duration:90,frequencyPattern:[90,140,210,280,360,440,540,660,780,920],toneDuration:4,pauseDuration:1.2,gain:0.24,intensity:5,description:'Langere frequentiesweep voor een grondigere reiniging.'},
+    'gentle': {name:'Gentle Mode',duration:45,frequencyPattern:[120,180,250,320],toneDuration:3,pauseDuration:1.5,gain:0.18,intensity:3,description:'Mildere frequenties voor regelmatig onderhoud.'},
+    'custom': {name:'Custom',duration:60,frequencyPattern:[100,150,220,300,400,500,650,800],toneDuration:3.5,pauseDuration:0.8,gain:0.24,intensity:5,description:'Gebruik je eigen duur en intensiteit.'}
+  };
+
+  const $ = id => document.getElementById(id);
+  const startButton=$('start-clean'), stopButton=$('stop-clean'), statusLabel=$('status-label'), statusDot=$('status-dot');
+  const countdownEl=$('countdown'), progressBar=$('progress-bar'), progressText=$('progress-text');
+  const cleanModeSelect=$('clean-mode'), durationSlider=$('duration'), durationValue=$('duration-value');
+  const intensitySlider=$('intensity'), intensityValue=$('intensity-value'), toggleAdvanced=$('toggle-advanced'), advancedControls=$('advanced-controls');
+  const modeDescription=$('mode-description'), errorBox=$('error-box');
+  $('year').textContent=new Date().getFullYear();
+
+  class AudioEngine {
+    constructor(){this.audioCtx=null;this.analyser=null;this.frequencyData=null;}
+    async initialize(){
+      if(!this.audioCtx){
+        const Ctx=window.AudioContext||window.webkitAudioContext;
+        if(!Ctx) throw new Error('Deze browser ondersteunt Web Audio API niet.');
+        this.audioCtx=new Ctx();
+        this.analyser=this.audioCtx.createAnalyser();
+        this.analyser.fftSize=2048;
+        this.frequencyData=new Uint8Array(this.analyser.frequencyBinCount);
+        this.analyser.connect(this.audioCtx.destination);
+      }
+      if(this.audioCtx.state==='suspended') await this.audioCtx.resume();
+      return this.audioCtx;
+    }
+  }
+
+  class Visualizer {
+    constructor(container){this.container=container;this.canvas=document.createElement('canvas');this.ctx=this.canvas.getContext('2d');this.active=false;this.freqs=Array.from({length:15},(_,i)=>100+i*50);this.current=0;this.particles=[];this.phase=0;this.resizeObserver=null;}
+    init(){
+      this.container.appendChild(this.canvas);
+      const resize=()=>{const r=this.container.getBoundingClientRect();const dpr=Math.min(window.devicePixelRatio||1,2);this.canvas.width=Math.max(1,Math.floor(r.width*dpr));this.canvas.height=Math.max(1,Math.floor(r.height*dpr));this.canvas.style.width=r.width+'px';this.canvas.style.height=r.height+'px';this.ctx.setTransform(dpr,0,0,dpr,0,0);this.w=r.width;this.h=r.height;};
+      this.resizeObserver=new ResizeObserver(resize);this.resizeObserver.observe(this.container);resize();requestAnimationFrame(()=>this.animate());
+    }
+    setActive(v){this.active=v;if(v)this.particles=[];}
+    updateFrequency(f){this.current=this.freqs.reduce((best,cur)=>Math.abs(cur-f)<Math.abs(best-f)?cur:best,this.freqs[0]);if(this.active&&Math.random()>.7)this.spawn(f);}
+    spawn(f){this.particles.push({x:Math.max(0,Math.min(this.w,(f-100)/700*this.w)),y:this.h/2,vx:(Math.random()-.5)*2,vy:-(1+Math.random()*2)*(f/200),s:2+Math.random()*4,life:1, hue:180+f/10});}
+    animate(){this.phase+=this.active?0.012:0.022;this.draw();requestAnimationFrame(()=>this.animate());}
+    draw(){
+      if(!this.w||!this.h)return;const c=this.ctx;c.clearRect(0,0,this.w,this.h);const cy=this.h/2,max=this.h*(this.active?.31:.23);
+      for(let i=0;i<this.freqs.length;i++){
+        const f=this.freqs[i],x=(f-100)/700*this.w;let intensity=this.active?(f===this.current?1:.18):(.28+.22*(Math.sin(this.phase*(1+i*.035)+i*1.7)+1)/2);const h=max*(f/800)*(0.35+intensity*.65);
+        const g=c.createLinearGradient(x,cy-h,x,cy+h);g.addColorStop(0,`rgba(96,165,250,${.18+intensity*.6})`);g.addColorStop(1,`rgba(34,211,238,${.08+intensity*.3})`);c.fillStyle=g;c.fillRect(x-7,cy-h,14,h*2);
+        if(this.active&&f===this.current){c.strokeStyle='rgba(191,219,254,.9)';c.lineWidth=2;c.strokeRect(x-10,cy-h-2,20,h*2+4);c.strokeStyle='rgba(96,165,250,.45)';c.setLineDash([4,5]);c.beginPath();c.moveTo(x,8);c.lineTo(x,this.h-14);c.stroke();c.setLineDash([]);c.fillStyle='rgba(239,246,255,.96)';c.font='700 15px ui-monospace,monospace';c.textAlign='center';c.fillText(`${f} Hz`,x,18);}
+      }
+      this.particles=this.particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.life-=this.active?.025:.007;if(p.life<=0)return false;c.globalAlpha=Math.max(0,p.life);c.fillStyle=`hsl(${p.hue},75%,65%)`;c.beginPath();c.arc(p.x,p.y,p.s,0,Math.PI*2);c.fill();c.globalAlpha=1;return true;});
+      c.fillStyle='rgba(191,219,254,.45)';c.font='11px ui-monospace,monospace';c.textAlign='center';[100,300,500,700,800].forEach(f=>c.fillText(f,(f-100)/700*this.w,this.h-5));
+      if(!this.active){c.fillStyle='rgba(191,219,254,.45)';c.font='13px ui-monospace,monospace';c.fillText('Ready to start water ejection',this.w/2,this.h-27);if(Math.random()>.96&&this.particles.length<8)this.spawn(100+Math.random()*700);}
+    }
+  }
+
+  const audio=new AudioEngine(), visual=new Visualizer($('frequency-visualizer'));
+  visual.init();
+  let isCleaning=false, activeOscillator=null, activeGain=null, sessionStart=0, timers=[] , raf=0, currentSettings=null;
+
+  function addTimer(id){timers.push(id);return id}
+  function clearTimers(){timers.forEach(clearInterval);timers.forEach(clearTimeout);timers=[];if(raf)cancelAnimationFrame(raf);raf=0;}
+  function getSettings(){
+    const key=cleanModeSelect.value;const base=MODES[key];
+    if(key==='custom'){
+      const intensity=Number(intensitySlider.value),gain=.15+(intensity/10)*.15;
+      return {...base,duration:Number(durationSlider.value),intensity,gain};
+    }
+    return {...base};
+  }
+  function renderSettings(){
+    const s=getSettings();modeDescription.textContent=s.description;durationValue.textContent=durationSlider.value;intensityValue.textContent=intensitySlider.value;countdownEl.innerHTML=`${s.duration}<span class="unit">sec</span>`;if(!isCleaning){progressBar.style.width='0%';progressText.textContent='0%';}
+  }
+  function showError(msg){errorBox.textContent=msg;errorBox.classList.add('show')}
+  function clearError(){errorBox.textContent='';errorBox.classList.remove('show')}
+  function setStatus(msg,live=false){statusLabel.textContent=msg;statusDot.classList.toggle('live',live);}
+  function resetUI(){startButton.disabled=false;stopButton.disabled=true;setStatus('Klaar om te starten',false);const s=getSettings();countdownEl.innerHTML=`${s.duration}<span class="unit">sec</span>`;progressBar.style.width='0%';progressText.textContent='0%';visual.setActive(false);}
+
+  function scheduleWaterEject(osc,gain,start,end,s){
+    let t=start;
+    let i=0;
+    const pattern=s.frequencyPattern;
+    const peak=Math.max(MUTE_GAIN,s.gain);
+    while(t<end){
+      const tone=Math.min(s.toneDuration,end-t);
+      if(tone<=0)break;
+
+      const low=pattern[i%pattern.length];
+      const high=pattern[(i+1)%pattern.length];
+      const mid=t+tone*.5;
+      const toneEnd=t+tone;
+
+      // Smooth low-frequency sweep instead of the old 100–800 Hz jumps.
+      osc.frequency.setValueAtTime(low,t);
+      osc.frequency.linearRampToValueAtTime(high,mid);
+      osc.frequency.linearRampToValueAtTime(low+(high-low)*.35,toneEnd);
+
+      // Short pulses create the characteristic 'hammering' effect.
+      gain.gain.setValueAtTime(MUTE_GAIN,t);
+      gain.gain.linearRampToValueAtTime(peak,t+Math.min(.08,tone*.2));
+      gain.gain.setValueAtTime(peak,Math.max(t+Math.min(.12,tone*.3),toneEnd-.18));
+      gain.gain.linearRampToValueAtTime(MUTE_GAIN,toneEnd);
+
+      t=toneEnd;
+      i++;
+      const gap=Math.min(s.pauseDuration,end-t);
+      if(gap<=0)break;
+      gain.gain.setValueAtTime(MUTE_GAIN,t);
+      t+=gap;
+    }
+    gain.gain.setTargetAtTime(MUTE_GAIN,end,.08);
+  }
+
+  function scheduleSweep(osc,gain,start,end,s){
+    if(s === currentSettings && cleanModeSelect.value === 'water-eject'){
+      scheduleWaterEject(osc,gain,start,end,s);
+      return;
+    }
+    let t=start,i=0;const pattern=s.frequencyPattern;
+    while(t<end){
+      const f=pattern[i%pattern.length],tone=Math.min(s.toneDuration,end-t);if(tone<=0)break;
+      osc.frequency.setValueAtTime(f,t);gain.gain.setValueAtTime(MUTE_GAIN,t);
+      const attack=Math.min(.4,tone/2);if(attack>0){gain.gain.linearRampToValueAtTime(Math.max(MUTE_GAIN,s.gain),t+attack);}else gain.gain.setValueAtTime(Math.max(MUTE_GAIN,s.gain),t);
+      const toneEnd=t+tone,gap=Math.min(s.pauseDuration,end-toneEnd);gain.gain.setTargetAtTime(MUTE_GAIN,Math.max(toneEnd-.25,t),.2);t=toneEnd;i++;
+      if(gap<=0)break;gain.gain.setValueAtTime(MUTE_GAIN,t);t+=gap;
+    }
+    gain.gain.setTargetAtTime(MUTE_GAIN,end,.15);
+  }
+
+  function updateProgress(){
+    if(!isCleaning)return;const s=currentSettings||getSettings();const elapsed=(Date.now()-sessionStart)/1000;const pct=Math.min(100,(elapsed/s.duration)*100);progressBar.style.width=pct+'%';progressText.textContent=Math.round(pct)+'%';countdownEl.innerHTML=`${Math.max(0,s.duration-Math.floor(elapsed))}<span class="unit">sec</span>`;if(elapsed<s.duration+0.4)raf=requestAnimationFrame(updateProgress);
+  }
+
+  async function startCleaning(){
+    if(isCleaning)return;clearError();
+    try{
+      const ctx=await audio.initialize();currentSettings=getSettings();const s=currentSettings;const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';gain.gain.setValueAtTime(MUTE_GAIN,ctx.currentTime);osc.connect(gain);gain.connect(audio.analyser);
+      const start=ctx.currentTime+.05,end=start+s.duration;scheduleSweep(osc,gain,start,end,s);activeOscillator=osc;activeGain=gain;osc.start(start);osc.stop(end+.55);
+      isCleaning=true;sessionStart=Date.now();startButton.disabled=true;stopButton.disabled=false;setStatus(`${s.name} bezig…`,true);visual.setActive(true);updateProgress();
+      const visualTimer=setInterval(()=>{if(!isCleaning)return;const elapsed=(Date.now()-sessionStart)/1000;let acc=0,activeFreq=s.frequencyPattern[0];for(const f of s.frequencyPattern){const block=s.toneDuration+s.pauseDuration;if(elapsed>=acc&&elapsed<acc+block){activeFreq=f;break}acc+=block;}visual.updateFrequency(activeFreq)},50);addTimer(visualTimer);
+      const doneTimer=setInterval(()=>{if(Date.now()-sessionStart>=s.duration*1000+600)finish(true)},250);addTimer(doneTimer);
+      osc.addEventListener('ended',()=>{if(isCleaning)finish(true)});
+    }catch(e){isCleaning=false;clearTimers();resetUI();showError(e?.message||'Audio kon niet worden gestart.');}
+  }
+
+  function finish(completed=false){
+    if(!isCleaning&&!completed)return;isCleaning=false;clearTimers();visual.setActive(false);
+    if(activeGain&&audio.audioCtx){try{const now=audio.audioCtx.currentTime;activeGain.gain.cancelScheduledValues(now);activeGain.gain.setTargetAtTime(MUTE_GAIN,now,.08)}catch(_){} }
+    if(activeOscillator){try{activeOscillator.stop()}catch(_){}try{activeOscillator.disconnect()}catch(_){}activeOscillator=null}activeGain=null;
+    if(completed){setStatus('Reiniging voltooid',false);progressBar.style.width='100%';progressText.textContent='100%';countdownEl.innerHTML=`0<span class="unit">sec</span>`;setTimeout(()=>{if(!isCleaning){resetUI()}},2500)}else resetUI();
+  }
+
+  function stopCleaning(){if(!isCleaning)return;finish(false)}
+
+  cleanModeSelect.addEventListener('change',()=>{renderSettings();clearError()});
+  durationSlider.addEventListener('input',renderSettings);intensitySlider.addEventListener('input',renderSettings);
+  toggleAdvanced.addEventListener('click',()=>{const hidden=getComputedStyle(advancedControls).display==='none';advancedControls.style.display=hidden?'block':'none';toggleAdvanced.textContent=hidden?'Geavanceerde opties verbergen':'Geavanceerde opties tonen'});
+  startButton.addEventListener('click',startCleaning);stopButton.addEventListener('click',stopCleaning);
+  renderSettings();
+
+  // Lightweight public API retained from the original project.
+  window.WEAudio={start:async(durationOverride)=>{if(durationOverride)durationSlider.value=Math.max(10,Math.min(180,Number(durationOverride)));await startCleaning()},stop:stopCleaning,isPlaying:()=>isCleaning};
+})();
+</script>
+</body>
+</html>
